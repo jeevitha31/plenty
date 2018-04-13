@@ -103,54 +103,38 @@ class PaymentController extends Controller
     
     {
         $requestData = $this->request->all();
-        
-        
-         $this->getLogger(__METHOD__)->error('ExecutePayment response.', $requestData);
-         
-        
-         
-         
-         
-         
-         
-         
-         
-         
-        if((!empty($requestData['tid'])) && (!empty($requestData['status'])))
+        $this->getLogger(__METHOD__)->error('ExecutePayment response.', $requestData);
+     
+        $requestData['payment_id'] = (!empty($requestData['payment_id'])) ? $requestData['payment_id'] : $requestData['key'];
+
+		$this->getLogger(__METHOD__)->error('ExecutePayment response1.', $requestData['payment_id']);
+        $isPaymentSuccess = isset($requestData['status']) && in_array($requestData['status'], ['90','100']);
+
+        $notifications = json_decode($this->sessionStorage->getPlugin()->getValue('notifications'));
+        array_push($notifications,[
+                'message' => $this->paymentHelper->getNovalnetStatusText($requestData),
+                'type'    => $isPaymentSuccess ? 'success' : 'error',
+                'code'    => 0
+            ]);
+        $this->sessionStorage->getPlugin()->setValue('notifications', json_encode($notifications));
+
+        if($isPaymentSuccess)
         {
-			 $this->getLogger(__METHOD__)->error('ExecutePayment redirect.', $requestData);
-			 return $this->response->redirectTo('confirmation');
-		}
-        
-        //~ $requestData['payment_id'] = (!empty($requestData['payment_id'])) ? $requestData['payment_id'] : $requestData['key'];
+            if(!preg_match('/^[0-9]/', $requestData['test_mode']))
+            {
+                $requestData['test_mode'] = $this->paymentHelper->decodeData($requestData['test_mode'], $requestData['uniqid']);
+                $requestData['amount']    = $this->paymentHelper->decodeData($requestData['amount'], $requestData['uniqid']) / 100;
+            }
 
-        //~ $isPaymentSuccess = isset($requestData['status']) && in_array($requestData['status'], ['90','100']);
+            $paymentRequestData = $this->sessionStorage->getPlugin()->getValue('nnPaymentData');
+            $this->sessionStorage->getPlugin()->setValue('nnPaymentData', array_merge($paymentRequestData, $requestData));
 
-        //~ $notifications = json_decode($this->sessionStorage->getPlugin()->getValue('notifications'));
-        //~ array_push($notifications,[
-                //~ 'message' => $this->paymentHelper->getNovalnetStatusText($requestData),
-                //~ 'type'    => $isPaymentSuccess ? 'success' : 'error',
-                //~ 'code'    => 0
-            //~ ]);
-        //~ $this->sessionStorage->getPlugin()->setValue('notifications', json_encode($notifications));
-
-        //~ if($isPaymentSuccess)
-        //~ {
-            //~ if(!preg_match('/^[0-9]/', $requestData['test_mode']))
-            //~ {
-                //~ $requestData['test_mode'] = $this->paymentHelper->decodeData($requestData['test_mode'], $requestData['uniqid']);
-                //~ $requestData['amount']    = $this->paymentHelper->decodeData($requestData['amount'], $requestData['uniqid']) / 100;
-            //~ }
-
-            //~ $paymentRequestData = $this->sessionStorage->getPlugin()->getValue('nnPaymentData');
-            //~ $this->sessionStorage->getPlugin()->setValue('nnPaymentData', array_merge($paymentRequestData, $requestData));
-
-            //~ // Redirect to the success page.
-            //~ return $this->response->redirectTo('place-order');
-        //~ } else {
-            //~ // Redirects to the cancellation page.
-            //~ return $this->response->redirectTo('checkout');
-        //~ }
+            // Redirect to the success page.
+            return $this->response->redirectTo('place-order');
+        } else {
+            // Redirects to the cancellation page.
+            return $this->response->redirectTo('checkout');
+        }
     }
     
     
