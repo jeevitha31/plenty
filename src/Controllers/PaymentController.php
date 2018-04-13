@@ -298,8 +298,10 @@ class PaymentController extends Controller
 	$requestData = $this->request->all();
 	$this->getLogger(__METHOD__)->error('ExecutePayment response298', 'sfd');
 	$paymentRequestData = $this->sessionStorage->getPlugin()->getValue('nnPaymentData');
-        $orderNo = $this->sessionStorage->getPlugin()->getValue('nnOrderNo');
-        $paymentUrl = $this->sessionStorage->getPlugin()->getValue('nnPaymentUrl');
+	$orderNo = $this->sessionStorage->getPlugin()->getValue('nnOrderNo');
+	$paymentRequestData['order_no'] = $orderNo;
+   
+    $paymentUrl = $this->sessionStorage->getPlugin()->getValue('nnPaymentUrl');
 	
        return $content = $this->twig->render('Novalnet::NovalnetPaymentRedirectForm', [
                                                                 'formData'     => $paymentRequestData,
